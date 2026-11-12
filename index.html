@@ -1,0 +1,996 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Solar Quest - A Jornada da Economia</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&family=VT323&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --pixel-bg: #8AD47E; /* Verde grama suave (Estilo Pokemon) */
+            --pixel-box: #4A4A4A; /* Borda cinza escuro para UI */
+            --pixel-yellow: #F8E79A; /* Caminho de areia */
+            --pixel-red: #D86060;
+            --pixel-green: #68B068;
+            --pixel-blue: #6088D8;
+            --pixel-dark: #222222;
+            --pixel-white: #F8F8F8;
+        }
+
+        body {
+            font-family: 'Press Start 2P', cursive;
+            background-color: var(--pixel-bg);
+            color: var(--pixel-dark);
+            overflow-x: hidden;
+            touch-action: manipulation;
+        }
+
+        .font-vt {
+            font-family: 'VT323', monospace;
+        }
+
+        /* 8-bit UI Elements (Pokemon Fire Red style) */
+        .pixel-border {
+            border: 4px solid var(--pixel-box);
+            border-radius: 8px; /* Cantos levemente arredondados */
+            background-color: var(--pixel-white);
+            box-shadow: inset 0 0 0 3px #D0D0D0, 0 4px 6px rgba(0,0,0,0.1);
+        }
+
+        .pixel-btn {
+            border: 2px solid var(--pixel-box);
+            border-radius: 6px;
+            box-shadow: 0px 3px 0px 0px var(--pixel-box);
+            text-transform: uppercase;
+            cursor: pointer;
+            transition: transform 0.1s, box-shadow 0.1s;
+        }
+
+        .pixel-btn:active {
+            transform: translateY(3px);
+            box-shadow: 0px 0px 0px 0px var(--pixel-box);
+        }
+        
+        .pixel-btn:disabled {
+            filter: grayscale(100%);
+            cursor: not-allowed;
+            transform: none !important;
+            box-shadow: 0px 3px 0px 0px var(--pixel-box) !important;
+        }
+
+        .pixel-btn-yellow { background-color: var(--pixel-yellow); color: var(--pixel-dark); }
+        .pixel-btn-red { background-color: var(--pixel-red); color: white; }
+        .pixel-btn-green { background-color: var(--pixel-green); color: white; }
+        .pixel-btn-blue { background-color: var(--pixel-blue); color: white; }
+
+        .pixel-input {
+            border: 2px solid var(--pixel-box);
+            border-radius: 4px;
+            background: #fff;
+            padding: 10px;
+            width: 100%;
+            outline: none;
+            font-family: 'VT323', monospace;
+            font-size: 1.5rem;
+            box-shadow: inset 0 2px 4px rgba(0,0,0,0.05);
+        }
+
+        .pixel-input:focus {
+            background: #f0f8ff;
+            border-color: var(--pixel-blue);
+        }
+
+        /* Board */
+        .board-container {
+            position: relative;
+            width: 100%;
+            max-width: 600px;
+            margin: 0 auto;
+            background-color: #8AD47E; /* Grama Base */
+            border: 4px solid #68B068; /* Borda da Grama */
+            border-radius: 8px;
+            padding: 10px;
+            box-shadow: inset 0 0 10px rgba(0,0,0,0.1);
+            background-image: 
+                radial-gradient(#72C264 20%, transparent 22%),
+                radial-gradient(#6BB55E 20%, transparent 22%);
+            background-size: 24px 24px;
+            background-position: 0 0, 12px 12px;
+        }
+
+        .board-grid {
+            display: grid;
+            grid-template-columns: repeat(5, 1fr);
+            grid-template-rows: repeat(5, 1fr);
+            gap: 5px;
+            aspect-ratio: 1 / 1;
+        }
+
+        .tile {
+            background-color: var(--pixel-yellow); /* Cor de areia/terra clara */
+            border: 2px solid #E6CD7D;
+            border-bottom: 4px solid #D4B658;
+            border-radius: 6px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 0.6rem;
+            color: #705820;
+            position: relative;
+        }
+        
+        .tile-special {
+            background-color: #FFF3C4;
+            border-color: #E6CD7D;
+            color: #000;
+            animation: pulse 2s infinite;
+        }
+
+        .tile-end {
+            background-color: var(--pixel-red);
+            border-color: #B04040;
+            border-bottom: 4px solid #903030;
+            color: #fff;
+        }
+        
+        .deco-tile {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            opacity: 0.9;
+        }
+
+        /* Avatar */
+        #player-avatar {
+            position: absolute;
+            width: 12%; /* Relativo ao container */
+            height: 12%;
+            z-index: 20;
+            transition: left 0.4s ease-in-out, top 0.4s ease-in-out;
+            pointer-events: none;
+        }
+
+        .bouncing {
+            animation: bounce 0.6s infinite alternate cubic-bezier(0.5, 0.05, 1, 0.5);
+        }
+
+        @keyframes bounce {
+            0% { transform: translateY(0); }
+            100% { transform: translateY(-15px); }
+        }
+        
+        @keyframes pulse {
+            0% { filter: brightness(1); }
+            50% { filter: brightness(1.2); }
+            100% { filter: brightness(1); }
+        }
+
+        /* Modals and Overlays */
+        .modal-overlay {
+            background: rgba(0, 0, 0, 0.75);
+            backdrop-filter: blur(4px);
+        }
+
+        .avatar-option {
+            cursor: pointer;
+            transition: transform 0.2s;
+            opacity: 0.6;
+        }
+        
+        .avatar-option.selected {
+            opacity: 1;
+            transform: scale(1.1);
+            filter: drop-shadow(0 0 10px yellow);
+        }
+
+        /* Floating Money Animation */
+        .floating-money {
+            position: absolute;
+            font-size: 1.2rem;
+            font-weight: bold;
+            pointer-events: none;
+            z-index: 50;
+            animation: floatUp 1.5s forwards ease-out;
+        }
+
+        @keyframes floatUp {
+            0% { opacity: 1; transform: translateY(0) scale(1); }
+            100% { opacity: 0; transform: translateY(-60px) scale(1.5); }
+        }
+
+        .text-shadow {
+            text-shadow: 1px 1px 0px #505050; /* Sombra mais suave */
+        }
+        
+        /* Hide scrollbar for game feel */
+        ::-webkit-scrollbar { width: 8px; }
+        ::-webkit-scrollbar-track { background: var(--pixel-bg); }
+        ::-webkit-scrollbar-thumb { background: var(--pixel-box); }
+    </style>
+</head>
+<body class="antialiased min-h-screen flex flex-col">
+
+    <!-- SCREEN: SETUP -->
+    <div id="screen-setup" class="flex-1 flex flex-col items-center justify-center p-4">
+        <div class="pixel-border p-6 md:p-8 max-w-md w-full text-center relative mt-8">
+            <div class="absolute -top-10 left-1/2 transform -translate-x-1/2 bg-[var(--pixel-blue)] border-4 border-[var(--pixel-box)] rounded-lg px-4 py-2 shadow-[inset_0_0_0_2px_rgba(255,255,255,0.4)]">
+                <h1 class="text-xl md:text-2xl text-shadow text-white">SOLAR QUEST</h1>
+            </div>
+            
+            <p class="text-xs md:text-sm mt-4 mb-6 leading-relaxed font-vt text-lg">
+                Bem-vindo ao simulador de economia. Você está perdendo dinheiro?
+            </p>
+
+            <div class="text-left mb-4">
+                <label class="block text-sm mb-2 text-gray-700">NOME / CARGO</label>
+                <input type="text" id="input-name" class="pixel-input" placeholder="Ex: Maria Empresária" maxlength="25">
+            </div>
+
+            <div class="text-left mb-6">
+                <label class="block text-sm mb-2 text-gray-700">CONTA DE LUZ MENSAL (R$)</label>
+                <input type="number" id="input-bill" class="pixel-input" placeholder="Mínimo R$ 250" min="250">
+                <p id="error-msg" class="text-red-500 text-[10px] mt-1 hidden">O valor mínimo é R$ 250.</p>
+            </div>
+
+            <div class="text-left mb-6">
+                <label class="block text-sm mb-2 text-center text-gray-700">ESCOLHA SEU AVATAR</label>
+                <div class="flex justify-center gap-4" id="avatar-selection">
+                    <!-- Injetado via JS -->
+                </div>
+            </div>
+
+            <button onclick="startGame()" class="pixel-btn pixel-btn-green w-full py-4 text-sm md:text-base">
+                START GAME
+            </button>
+        </div>
+    </div>
+
+    <!-- SCREEN: GAME -->
+    <div id="screen-game" class="flex-1 hidden flex-col relative pb-20">
+        <!-- HUD -->
+        <div class="pixel-border m-2 p-2 bg-white flex flex-wrap items-center justify-between z-10 text-xs md:text-sm">
+            <div class="flex items-center gap-2 w-full md:w-auto mb-2 md:mb-0">
+                <div id="hud-avatar" class="w-10 h-10 md:w-12 md:h-12"></div>
+                <div>
+                    <div id="hud-name" class="font-bold truncate max-w-[150px]">Nome</div>
+                    <div class="font-vt text-lg text-gray-600 leading-none mt-1">Base: R$ <span id="hud-base-bill">0</span></div>
+                    <div id="hud-discount-info" class="font-vt text-lg text-green-700 font-bold leading-none mt-1 hidden">
+                        Desc: <span id="hud-perc">0</span>% (R$ <span id="hud-monthly-discount">0</span>)
+                    </div>
+                </div>
+            </div>
+            
+            <div class="flex gap-4 w-full md:w-auto justify-between md:justify-end">
+                <div class="text-center">
+                    <div class="text-blue-600 mb-1">MÊS</div>
+                    <div id="hud-month" class="text-xl">1</div>
+                </div>
+                <div class="text-center px-2 border-l-2 border-dashed border-gray-300">
+                    <div class="text-yellow-600 mb-1 text-xs">DESC. ACUMULADO</div>
+                    <div id="hud-vault" class="text-xl" style="transition: color 0.3s;">R$ 0</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Board -->
+        <div class="flex-1 flex items-center justify-center p-2 mt-4">
+            <div id="board" class="board-container">
+                <div id="board-grid" class="board-grid">
+                    <!-- Tiles will be injected via JS -->
+                </div>
+                <!-- Avatar Player -->
+                <div id="player-avatar" class="bouncing">
+                    <!-- Avatar SVG will be injected here -->
+                </div>
+            </div>
+        </div>
+
+        <!-- Controls -->
+        <div class="fixed bottom-4 left-0 w-full px-4 z-10 flex justify-center">
+            <button id="btn-roll" onclick="rollDice()" class="pixel-btn pixel-btn-yellow py-4 px-8 text-sm md:text-base w-full max-w-sm flex items-center justify-center gap-2">
+                🎲 JOGAR DADO
+            </button>
+        </div>
+    </div>
+
+    <!-- SCREEN: END GAME -->
+    <div id="screen-end" class="flex-1 hidden flex-col items-center justify-center p-4">
+        <div id="end-panel" class="pixel-border p-6 md:p-8 max-w-lg w-full text-center relative mt-8">
+            <h1 id="end-title" class="text-xl md:text-2xl text-shadow text-white mb-6 p-4 border-4 border-[var(--pixel-box)] rounded-lg shadow-[inset_0_0_0_2px_rgba(255,255,255,0.4)]">
+                NATAL...
+            </h1>
+            
+            <div class="font-vt text-xl md:text-2xl mb-4 leading-tight">
+                <p id="end-summary-text">Você economizou / perdeu</p>
+                <p id="end-amount" class="text-3xl font-bold mt-2 mb-4">R$ 0,00</p>
+            </div>
+
+            <div id="projection-box" class="bg-blue-100 border-2 border-blue-400 p-3 mb-6 hidden">
+                <p class="text-sm text-blue-800 mb-1">PROJEÇÃO PARA 1 ANO</p>
+                <p id="end-projection" class="font-vt text-3xl text-blue-900 font-bold">R$ 0,00</p>
+            </div>
+
+            <p class="text-xs md:text-sm text-gray-600 mb-6 text-left leading-relaxed">
+                <strong>COMO O DESCONTO EXISTE?</strong> Geramos energia solar muito mais barata que a concessionária e repassamos a economia direto na sua conta. 100% seguro, feito pela maior geradora do Brasil.
+            </p>
+
+            <div class="space-y-3">
+                <p class="text-sm font-bold mb-2">Fale com seu consultor:</p>
+                
+                <a id="link-wpp" href="https://wa.me/5531987417847" target="_blank" class="pixel-btn pixel-btn-green block py-3 text-sm text-center no-underline">
+                    WhatsApp (Carlos Marcolino)
+                </a>
+                
+                <a id="link-ig" href="https://ig.me/m/carlos_descontonaluz" target="_blank" class="pixel-btn pixel-btn-blue block py-3 text-sm text-center no-underline">
+                    Instagram @carlos_descontonaluz
+                </a>
+                
+                <a id="link-email" href="mailto:reducaocorporativa@gmail.com" target="_blank" class="pixel-btn bg-gray-200 text-black block py-3 text-sm text-center no-underline hover:bg-gray-300">
+                    Email: reducaocorporativa
+                </a>
+            </div>
+            
+            <button onclick="location.reload()" class="mt-8 text-xs underline text-gray-500 hover:text-black">
+                Jogar Novamente
+            </button>
+        </div>
+    </div>
+
+    <!-- MODAL: CONSULTANT -->
+    <div id="modal-consultant" class="fixed inset-0 modal-overlay hidden z-50 flex items-center justify-center p-4">
+        <div class="pixel-border bg-white w-full max-w-sm p-6 text-center animate-bounce-short">
+            <div id="consultant-avatar" class="w-20 h-20 mx-auto mb-4 bg-blue-50 border-2 border-[var(--pixel-box)] rounded-lg overflow-hidden flex items-center justify-center shadow-inner">
+                <!-- Avatar injected via JS -->
+            </div>
+            <h2 class="text-base font-bold text-blue-800 mb-2">Carlos Marcolino</h2>
+            <p id="modal-text" class="text-sm md:text-base font-vt text-2xl mb-6 leading-relaxed">
+                Olá! Vi que sua conta é R$ 0. Libero um desconto garantido de 0%. Aceita a condição?
+            </p>
+            
+            <div class="flex flex-col gap-3">
+                <button onclick="makeDecision(true)" class="pixel-btn pixel-btn-green py-3 text-sm md:text-base">
+                    SIM, ACEITAR CONDIÇÃO
+                </button>
+                <button onclick="makeDecision(false)" class="pixel-btn pixel-btn-red py-3 text-sm md:text-base">
+                    NÃO, RECUSAR CONDIÇÃO
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Custom CSS Animation specific to Modal -->
+    <style>
+        .animate-bounce-short {
+            animation: popIn 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards;
+        }
+        @keyframes popIn {
+            0% { transform: scale(0.8); opacity: 0; }
+            100% { transform: scale(1); opacity: 1; }
+        }
+    </style>
+
+    <script>
+        /* ==========================
+           SVGs 8-BIT SPRITES (GBA FIRE RED STYLE 14x16 & 16x16)
+           ========================== */
+        
+        function renderSprite(matrix, palette, width, height) {
+            let rects = '';
+            for (let y = 0; y < height; y++) {
+                for (let x = 0; x < width; x++) {
+                    const val = matrix[y][x];
+                    if (val !== '0') {
+                        const color = val === '1' ? '#181818' : palette[val];
+                        rects += `<rect x="${x}" y="${y}" width="1" height="1" fill="${color}" />`;
+                    }
+                }
+            }
+            return `<svg viewBox="0 0 ${width} ${height}" class="w-full h-full drop-shadow-md" shape-rendering="crispEdges">${rects}</svg>`;
+        }
+
+        // Palette map: 1: black outline, 2: skin, 3: hair/hat, 4: primary cloth, 5: secondary cloth, 6: shoes/details
+        const avatarDesigns = [
+            { // 0: Red Boy (Boné, Jaqueta Azul)
+                c: {2:'#ffd8b0', 3:'#d82800', 4:'#2850a0', 5:'#ffffff', 6:'#f8d820'},
+                d: [
+                    "00000111100000",
+                    "00001333310000",
+                    "00013333331000",
+                    "00133133133100",
+                    "00133333333100",
+                    "00012222221000",
+                    "00012122121000",
+                    "00122222222100",
+                    "00111222211100",
+                    "00001444410000",
+                    "00014455441000",
+                    "00144555544100",
+                    "00114444441100",
+                    "00015555551000",
+                    "00166100166100",
+                    "00111000011100"
+                ]
+            },
+            { // 1: Blonde Girl (Cabelo longo, Blusa Rosa)
+                c: {2:'#ffd8b0', 3:'#f8d820', 4:'#f878a8', 5:'#ffffff', 6:'#d82800'},
+                d: [
+                    "00000111100000",
+                    "00001333310000",
+                    "00013333331000",
+                    "00133122133100",
+                    "00133222233100",
+                    "00013211231000",
+                    "00012222221000",
+                    "00111222211100",
+                    "01333144133310",
+                    "01331444413310",
+                    "01314455441310",
+                    "00114455441100",
+                    "00014444441000",
+                    "00015555551000",
+                    "00166100166100",
+                    "00111000011100"
+                ]
+            },
+            { // 2: Executive (Terno escuro, Gravata, Pele Negra)
+                c: {2:'#8D5524', 3:'#1A1A1A', 4:'#202020', 5:'#ffffff', 6:'#1A1A1A', 7:'#d82800'},
+                d: [
+                    "00000111100000",
+                    "00001333310000",
+                    "00013333331000",
+                    "00133333333100",
+                    "00133333333100",
+                    "00012222221000",
+                    "00012122121000",
+                    "00122222222100",
+                    "00111222211100",
+                    "00001444410000",
+                    "00014544541000",
+                    "00144577544100",
+                    "00114477441100",
+                    "00014444441000",
+                    "00166100166100",
+                    "00111000011100"
+                ]
+            },
+            { // 3: Scientist (Jaleco, Óculos)
+                c: {2:'#ffd8b0', 3:'#a0a0a0', 4:'#f8f8f8', 5:'#28a0d8', 6:'#181818'},
+                d: [
+                    "00000111100000",
+                    "00001333310000",
+                    "00013333331000",
+                    "00133333333100",
+                    "00133333333100",
+                    "00011122111000",
+                    "00015122151000",
+                    "00122222222100",
+                    "00111222211100",
+                    "00001444410000",
+                    "00014555541000",
+                    "00144555544100",
+                    "00114444441100",
+                    "00014444441000",
+                    "00166100166100",
+                    "00111000011100"
+                ]
+            }
+        ];
+
+        // Consultant Avatar (High Detail)
+        const consultantDesign = {
+            c: {2:'#ffd8b0', 3:'#201810', 4:'#e8e8e8', 5:'#2850a0', 6:'#383838', 7:'#d82800'},
+            d: [
+                "0000011111100000",
+                "0000133333310000",
+                "0001333333331000",
+                "0013333333333100",
+                "0013333333333100",
+                "0001322222231000",
+                "0001222222221000",
+                "0001212222121000",
+                "0001222222221000",
+                "0001122222211000",
+                "0012211221122100",
+                "0014441111444100",
+                "0164444554444610",
+                "0166444774446610",
+                "0166644774466610",
+                "0166664774666610"
+            ]
+        };
+
+        // Environment Decorations
+        const decoDesigns = {
+            'tree': { // Round Pokemon Style Tree
+                w:16, h:16, c:{2:'#287828', 3:'#489848', 4:'#885818'},
+                d: [
+                    "0000001111000000",
+                    "0000012222100000",
+                    "0000123322210000",
+                    "0001233222221000",
+                    "0012332222222100",
+                    "0122322222222210",
+                    "0122222222222210",
+                    "0122221222212210",
+                    "0012222122122100",
+                    "0001222211221000",
+                    "0000111144110000",
+                    "0000000144100000",
+                    "0000000144100000",
+                    "0000000144100000",
+                    "0000000111100000",
+                    "0000000000000000"
+                ]
+            },
+            'solar': { // Solar Panel Array
+                w:16, h:16, c:{2:'#b8b8b8', 3:'#2878d8', 4:'#103870', 5:'#606060'},
+                d: [
+                    "0000000000000000",
+                    "0011111111111100",
+                    "0122222222222210",
+                    "1233323332333221",
+                    "1234323432343221",
+                    "1233323332333221",
+                    "1222222222222221",
+                    "1233323332333221",
+                    "1234323432343221",
+                    "1233323332333221",
+                    "1222222222222221",
+                    "0111111111111110",
+                    "0000015510000000",
+                    "0000155551000000",
+                    "0000111111000000",
+                    "0000000000000000"
+                ]
+            },
+            'house': { // House with Solar Roof
+                w:16, h:16, c:{2:'#c84848', 3:'#802020', 4:'#2878d8', 5:'#f8e8c8', 6:'#88c8f8', 7:'#684828', 8:'#d8c828'},
+                d: [
+                    "0000111111110000",
+                    "0001222222221000",
+                    "0012334444332100",
+                    "0123344444433210",
+                    "0122222222222210",
+                    "1222222222222221",
+                    "1111111111111111",
+                    "0015555555555100",
+                    "0015511115555100",
+                    "0015516615111100",
+                    "0015511115177100",
+                    "0015555555178100",
+                    "0015555555177100",
+                    "0011111111111100",
+                    "0000000000000000",
+                    "0000000000000000"
+                ]
+            }
+        };
+
+        /* ==========================
+           GAME LOGIC & STATE
+           ========================== */
+        let state = {
+            name: '',
+            bill: 0,
+            avatarId: 0,
+            discountRate: 0,
+            monthlyDiscount: 0,
+            hasSigned: null, // true or false after Casa 2
+            vault: 0,
+            month: 0, // Represents turns taken after first modal
+            contractMonths: 0, // Months since signed
+            tileIndex: 0,
+            isMoving: false
+        };
+
+        // Grid 5x5: mapped coordinates to create an "S" path (13 tiles: Início + 12 meses)
+        const pathCoords = [
+            {c:1, r:1, label: 'INÍCIO'},
+            {c:2, r:1, label: 'JAN', special: true},
+            {c:3, r:1, label: 'FEV'},
+            {c:4, r:1, label: 'MAR'},
+            {c:5, r:1, label: 'ABR'},
+            {c:5, r:2, label: 'MAI'},
+            {c:5, r:3, label: 'JUN'},
+            {c:4, r:3, label: 'JUL'},
+            {c:3, r:3, label: 'AGO'},
+            {c:2, r:3, label: 'SET'},
+            {c:1, r:3, label: 'OUT'},
+            {c:1, r:4, label: 'NOV'},
+            {c:1, r:5, label: 'DEZ', end: true}
+        ];
+
+        // Map for environmental decorations on empty grid spaces
+        const environmentMap = {
+            "1,2": "tree",
+            "2,2": "solar",
+            "3,2": "house",
+            "4,2": "tree",
+            "2,4": "tree",
+            "3,4": "solar",
+            "4,4": "tree",
+            "5,4": "house",
+            "2,5": "tree",
+            "3,5": "solar",
+            "4,5": "tree",
+            "5,5": "tree"
+        };
+
+        /* ==========================
+           INITIALIZATION
+           ========================== */
+        function init() {
+            // Render Avatar Selection
+            const avatarContainer = document.getElementById('avatar-selection');
+            avatarContainer.innerHTML = '';
+            for (let i = 0; i < 4; i++) {
+                const div = document.createElement('div');
+                div.className = `w-14 h-14 p-1 pixel-border avatar-option bg-blue-100 ${i === 0 ? 'selected' : ''}`;
+                div.onclick = () => selectAvatar(i);
+                div.innerHTML = renderSprite(avatarDesigns[i].d, avatarDesigns[i].c, 14, 16);
+                avatarContainer.appendChild(div);
+            }
+
+            // Render Consultant Avatar
+            document.getElementById('consultant-avatar').innerHTML = renderSprite(consultantDesign.d, consultantDesign.c, 16, 16);
+
+            // Render Board
+            const boardGrid = document.getElementById('board-grid');
+            boardGrid.innerHTML = '';
+            
+            // Create cells to fill 5x5 grid
+            for(let r=1; r<=5; r++){
+                for(let c=1; c<=5; c++){
+                    const cell = document.createElement('div');
+                    cell.style.gridColumn = c;
+                    cell.style.gridRow = r;
+                    
+                    const pathIndex = pathCoords.findIndex(p => p.c === c && p.r === r);
+                    
+                    if (pathIndex !== -1) {
+                        // It's a playable tile
+                        cell.className = 'tile';
+                        cell.id = `tile-${pathIndex}`;
+                        const tileInfo = pathCoords[pathIndex];
+                        if (tileInfo.special) cell.classList.add('tile-special');
+                        if (tileInfo.end) cell.classList.add('tile-end');
+                        if (tileInfo.label) {
+                            cell.innerHTML = `<span>${tileInfo.label}</span>`;
+                        }
+                    } else {
+                        // It's an empty space, check for decorations
+                        const decoKey = `${c},${r}`;
+                        if (environmentMap[decoKey]) {
+                            cell.className = 'deco-tile';
+                            const decoType = environmentMap[decoKey];
+                            const deco = decoDesigns[decoType];
+                            cell.innerHTML = `<div class="w-4/5 h-4/5">` + renderSprite(deco.d, deco.c, deco.w, deco.h) + `</div>`;
+                        } else {
+                            cell.className = 'opacity-0'; // Empty grass
+                        }
+                    }
+                    boardGrid.appendChild(cell);
+                }
+            }
+        }
+
+        function selectAvatar(id) {
+            state.avatarId = id;
+            document.querySelectorAll('.avatar-option').forEach((el, index) => {
+                el.classList.toggle('selected', index === id);
+            });
+        }
+
+        /* ==========================
+           START GAME
+           ========================== */
+        function startGame() {
+            const nameInput = document.getElementById('input-name').value.trim();
+            const billInput = parseFloat(document.getElementById('input-bill').value);
+            const errorMsg = document.getElementById('error-msg');
+
+            if (isNaN(billInput) || billInput < 250) {
+                errorMsg.classList.remove('hidden');
+                return;
+            }
+            errorMsg.classList.add('hidden');
+
+            state.name = nameInput || 'Jogador';
+            state.bill = billInput;
+
+            // Calculate Discount Rules
+            if (state.bill >= 250 && state.bill <= 399) state.discountRate = 0.18;
+            else if (state.bill >= 400 && state.bill <= 999) state.discountRate = 0.20;
+            else if (state.bill >= 1000 && state.bill <= 4999) state.discountRate = 0.28;
+            else if (state.bill >= 5000) state.discountRate = 0.35;
+
+            state.monthlyDiscount = state.bill * state.discountRate;
+
+            // Update HUD
+            document.getElementById('hud-avatar').innerHTML = renderSprite(avatarDesigns[state.avatarId].d, avatarDesigns[state.avatarId].c, 14, 16);
+            document.getElementById('hud-name').innerText = state.name;
+            document.getElementById('hud-base-bill').innerText = state.bill.toLocaleString('pt-BR', {minimumFractionDigits: 2});
+            
+            // Show percentage and monthly amount
+            document.getElementById('hud-perc').innerText = (state.discountRate * 100).toFixed(0);
+            document.getElementById('hud-monthly-discount').innerText = state.monthlyDiscount.toLocaleString('pt-BR', {minimumFractionDigits: 2, maximumFractionDigits: 2});
+            document.getElementById('hud-discount-info').classList.remove('hidden');
+            
+            document.getElementById('hud-month').innerText = 'INÍCIO';
+            
+            // Setup Player Avatar on Board
+            document.getElementById('player-avatar').innerHTML = renderSprite(avatarDesigns[state.avatarId].d, avatarDesigns[state.avatarId].c, 14, 16);
+            
+            // Transition Screens
+            document.getElementById('screen-setup').classList.add('hidden');
+            document.getElementById('screen-setup').classList.remove('flex');
+            document.getElementById('screen-game').classList.remove('hidden');
+            document.getElementById('screen-game').classList.add('flex');
+
+            // Force reflow for initial position
+            setTimeout(() => {
+                updateAvatarPosition(true);
+            }, 100);
+        }
+
+        /* ==========================
+           CORE MECHANICS
+           ========================== */
+        
+        function formatMoney(value) {
+            return 'R$ ' + value.toLocaleString('pt-BR', {minimumFractionDigits: 2, maximumFractionDigits: 2});
+        }
+
+        function updateAvatarPosition(instant = false) {
+            const avatar = document.getElementById('player-avatar');
+            const targetTile = document.getElementById(`tile-${state.tileIndex}`);
+            
+            if (targetTile) {
+                if (instant) {
+                    avatar.style.transition = 'none';
+                } else {
+                    avatar.style.transition = 'left 0.4s linear, top 0.4s linear';
+                }
+                
+                // Calculate position to center avatar on tile
+                const boardRect = document.getElementById('board-grid').getBoundingClientRect();
+                const tileRect = targetTile.getBoundingClientRect();
+                
+                // Get relative position within the grid
+                const left = tileRect.left - boardRect.left;
+                const top = tileRect.top - boardRect.top;
+                
+                // Center offset
+                const offsetX = (tileRect.width - avatar.offsetWidth) / 2;
+                const offsetY = (tileRect.height - avatar.offsetHeight) / 2;
+                
+                avatar.style.left = `${left + offsetX}px`;
+                avatar.style.top = `${top + offsetY}px`;
+                
+                if (instant) {
+                    // Force reflow
+                    void avatar.offsetWidth;
+                }
+            }
+        }
+
+        function sleep(ms) {
+            return new Promise(resolve => setTimeout(resolve, ms));
+        }
+
+        async function rollDice() {
+            if (state.isMoving) return;
+            state.isMoving = true;
+            
+            const btn = document.getElementById('btn-roll');
+            btn.disabled = true;
+
+            let steps = 0;
+            
+            // Turn 0 logic: Force move 1 space to Consultant
+            if (state.tileIndex === 0) {
+                btn.innerHTML = 'Rolando... 🎲';
+                await sleep(500); // Fake roll delay
+                steps = 1;
+            } else {
+                // Normal roll: 1 to 3 (limitado à distância para Dezembro)
+                btn.innerHTML = 'Rolando... 🎲';
+                await sleep(500);
+                const distanceToDez = 12 - state.tileIndex;
+                const maxSteps = Math.min(3, distanceToDez); // Garante que não tire mais do que falta
+                steps = Math.floor(Math.random() * maxSteps) + 1;
+            }
+
+            btn.innerHTML = `TIROU ${steps}!`;
+            await sleep(600);
+
+            const monthsStr = ['INÍCIO', 'JAN', 'FEV', 'MAR', 'ABR', 'MAI', 'JUN', 'JUL', 'AGO', 'SET', 'OUT', 'NOV', 'DEZ'];
+
+            // Move step by step for visual tracking
+            for (let i = 0; i < steps; i++) {
+                state.tileIndex++;
+                if (state.tileIndex >= 12) {
+                    state.tileIndex = 12; // Cap at Tile 12 (Dez)
+                }
+                
+                state.month = state.tileIndex;
+                document.getElementById('hud-month').innerText = monthsStr[state.tileIndex];
+
+                updateAvatarPosition();
+                await sleep(400); // Wait for CSS transition
+                
+                if (state.tileIndex === 1 && state.hasSigned === null) {
+                    openConsultantModal();
+                    return; // Execution pauses until modal decision
+                }
+
+                // If already made decision, accumulate values while traversing
+                if (state.hasSigned !== null) {
+                    processMonthEnd();
+                }
+
+                if (state.tileIndex === 12) break;
+            }
+
+            if (state.tileIndex === 12) {
+                setTimeout(showEndGame, 800);
+            } else {
+                // Resume controls
+                document.getElementById('btn-roll').innerHTML = '🎲 JOGAR DADO';
+                document.getElementById('btn-roll').disabled = false;
+                state.isMoving = false;
+            }
+        }
+
+        /* ==========================
+           MODAL & DECISION LOGIC
+           ========================== */
+        function openConsultantModal() {
+            const modal = document.getElementById('modal-consultant');
+            const text = document.getElementById('modal-text');
+            const percent = (state.discountRate * 100).toFixed(0);
+            
+            text.innerHTML = `Olá, <strong>${state.name.split(' ')[0]}</strong>! Vi que sua conta é ${formatMoney(state.bill)}. Libero um desconto garantido de <strong>${percent}%</strong> sem custo de adesão. Aceita a condição?`;
+            
+            modal.classList.remove('hidden');
+        }
+
+        function makeDecision(accepted) {
+            state.hasSigned = accepted;
+            document.getElementById('modal-consultant').classList.add('hidden');
+            
+            // Appy January discount immediately
+            processMonthEnd();
+
+            // Resume Game
+            document.getElementById('btn-roll').innerHTML = '🎲 JOGAR DADO';
+            document.getElementById('btn-roll').disabled = false;
+            state.isMoving = false;
+        }
+
+        function processMonthEnd() {
+            let amountChanged = 0;
+
+            if (state.hasSigned) {
+                state.contractMonths++;
+                amountChanged = state.monthlyDiscount;
+                
+                showFloatingText('+' + formatMoney(amountChanged), 'text-green-500');
+                
+                state.vault += amountChanged;
+            } else {
+                // Lost money
+                amountChanged = state.monthlyDiscount;
+                state.vault -= amountChanged;
+                showFloatingText('-' + formatMoney(amountChanged), 'text-red-500');
+            }
+
+            updateVaultUI();
+        }
+
+        function showFloatingText(text, colorClass) {
+            const floating = document.createElement('div');
+            floating.className = `floating-money ${colorClass} text-shadow`;
+            floating.innerText = text;
+            
+            // Position near the avatar
+            const avatar = document.getElementById('player-avatar');
+            const board = document.getElementById('board');
+            
+            floating.style.left = avatar.style.left;
+            floating.style.top = avatar.style.top;
+            
+            board.appendChild(floating);
+            
+            setTimeout(() => {
+                floating.remove();
+            }, 1500);
+        }
+
+        function updateVaultUI() {
+            const vaultEl = document.getElementById('hud-vault');
+            vaultEl.innerText = formatMoney(state.vault);
+            
+            if (state.vault > 0) {
+                vaultEl.className = 'text-lg text-green-600 font-bold';
+            } else if (state.vault < 0) {
+                vaultEl.className = 'text-lg text-red-600 font-bold';
+            }
+        }
+
+        /* ==========================
+           END GAME
+           ========================== */
+        function showEndGame() {
+            document.getElementById('screen-game').classList.add('hidden');
+            document.getElementById('screen-game').classList.remove('flex');
+            document.getElementById('screen-end').classList.remove('hidden');
+            document.getElementById('screen-end').classList.add('flex');
+
+            const title = document.getElementById('end-title');
+            const panel = document.getElementById('end-panel');
+            const summaryText = document.getElementById('end-summary-text');
+            const amountText = document.getElementById('end-amount');
+            const projBox = document.getElementById('projection-box');
+            const projText = document.getElementById('end-projection');
+
+            // Atualiza links dinâmicos de contato com os dados do jogador
+            const wppLink = document.getElementById('link-wpp');
+            const igLink = document.getElementById('link-ig');
+            const emailLink = document.getElementById('link-email');
+            
+            // Cria a mensagem dinâmica
+            const billFormatted = state.bill.toLocaleString('pt-BR', {minimumFractionDigits: 2, maximumFractionDigits: 2});
+            const dynamicMsg = `Olá, meu nome é ${state.name}, joguei o jogo e minha média de energia simulada é R$ ${billFormatted}.`;
+            const encodedMsg = encodeURIComponent(dynamicMsg);
+
+            wppLink.href = `https://wa.me/5531987417847?text=${encodedMsg}`;
+            igLink.href = `https://ig.me/m/carlos_descontonaluz?text=${encodedMsg}`;
+            
+            const emailSubject = encodeURIComponent("Interesse no desconto de energia");
+            emailLink.href = `mailto:reducaocorporativa@gmail.com?subject=${emailSubject}&body=${encodedMsg}`;
+
+            if (state.hasSigned) {
+                title.innerText = "NATAL COM DINHEIRO NO BOLSO!";
+                title.classList.add('bg-green-500');
+                panel.style.borderColor = varColor('--pixel-green');
+                
+                summaryText.innerText = `Você economizou em ${state.contractMonths} meses:`;
+                amountText.innerText = formatMoney(state.vault);
+                amountText.classList.add('text-green-600');
+
+                // Projection
+                let oneYearProj = state.monthlyDiscount * 12;
+                
+                projText.innerText = formatMoney(oneYearProj);
+                projBox.classList.remove('hidden');
+                
+            } else {
+                title.innerText = "NATAL NO VERMELHO...";
+                title.classList.add('bg-red-500');
+                panel.style.borderColor = varColor('--pixel-red');
+                
+                summaryText.innerText = `Você perdeu para a concessionária:`;
+                amountText.innerText = formatMoney(Math.abs(state.vault));
+                amountText.classList.add('text-red-600');
+            }
+        }
+
+        function varColor(name) {
+            return getComputedStyle(document.documentElement).getPropertyValue(name).trim();
+        }
+
+        // Handle window resize to keep avatar on tile
+        window.addEventListener('resize', () => {
+            if (state.tileIndex >= 0) {
+                updateAvatarPosition(true);
+            }
+        });
+
+        // Initialize on load
+        window.onload = init;
+
+    </script>
+</body>
+</html>
